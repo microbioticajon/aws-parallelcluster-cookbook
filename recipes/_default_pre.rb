@@ -13,6 +13,8 @@
 # OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Python needs to be set up first so that pip is present to allow removal of python packages in _update_packages for ubuntu1804
+include_recipe 'aws-parallelcluster::_setup_python'
 include_recipe 'aws-parallelcluster::_update_packages'
 
 # Reboot after preliminary configuration steps
@@ -20,6 +22,11 @@ if !tagged?('rebooted') && node['cfncluster']['default_pre_reboot'] == 'true'
   # On Ubuntu, the /tmp folder is erased by default after a reboot and its lifecycle is managed
   # by different tools, depending on the Ubuntu version
   if node['platform'] == 'ubuntu'
+    if node['platform_version'] == "18.04"
+      file '/etc/tmpfiles.d/tmp.conf' do
+        content 'd /tmp 1777 root root 1d'
+      end
+    end
     if node['platform_version'] == "16.04"
       file '/etc/tmpfiles.d/tmp.conf' do
         content 'd /tmp 1777 root root 1d'
@@ -43,6 +50,12 @@ end
 # Remove the configuration to keep the /tmp folder on Ubuntu after a reboot
 if tagged?('rebooted')
   if node['platform'] == 'ubuntu'
+    if node['platform_version'] == "18.04"
+      file '/etc/tmpfiles.d/tmp.conf' do
+        action :delete
+        only_if { File.exist? '/etc/tmpfiles.d/tmp.conf' }
+      end
+    end
     if node['platform_version'] == "16.04"
       file '/etc/tmpfiles.d/tmp.conf' do
         action :delete
